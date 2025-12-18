@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cml_demo_01",
+    "title": "Neon Sprint",
+    "artist": "TikTok CML (example)",
+    "durationSec": 15,
+    "region": "FR",
+    "cmlUrl": "https://ads.tiktok.com/business/creativecenter/music/pc/en",
+    "tags": [
+      "game",
+      "energetic"
+    ]
+  },
+  {
+    "id": "cml_demo_02",
+    "title": "Soft Victory Sting",
+    "artist": "TikTok CML (example)",
+    "durationSec": 6,
+    "region": "FR",
+    "cmlUrl": "https://ads.tiktok.com/business/creativecenter/music/pc/en",
+    "tags": [
+      "win",
+      "short"
+    ]
+  }
+]
