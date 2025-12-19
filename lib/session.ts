@@ -1,41 +1,54 @@
+﻿import { cookies } from "next/headers";
 import crypto from "crypto";
-import { cookies } from "next/headers";
 
-const COOKIE_NAME = "tt_session";
+const COOKIE_NAME = "ml_session";
 
-function sign(payload: string, secret: string) {
-  return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+function sign(openId: string, secret: string) {
+  const sig = crypto.createHmac("sha256", secret).update(openId).digest("hex");
+  return `${openId}.${sig}`;
 }
 
-export function setSession(openId: string) {
+export async function setSession(openId: string) {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("Missing SESSION_SECRET");
-  const sig = sign(openId, secret);
-  const value = `${openId}.${sig}`;
-  cookies().set(COOKIE_NAME, value, {
+
+  const value = sign(openId, secret);
+
+  const cookieStore = await cookies(); // Next 15: cookies() is async
+  cookieStore.set(COOKIE_NAME, value, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30
   });
 }
 
-export function clearSession() {
-  cookies().set(COOKIE_NAME, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
+export async function clearSession() {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0
+  });
 }
 
-export function getOpenIdFromSession(): string | null {
+export async function getOpenIdFromSession(): Promise<string | null> {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("Missing SESSION_SECRET");
 
-  const v = cookies().get(COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const v = cookieStore.get(COOKIE_NAME)?.value;
   if (!v) return null;
 
   const [openId, sig] = v.split(".");
   if (!openId || !sig) return null;
 
-  const expected = sign(openId, secret);
-  const ok = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  const expected = crypto.createHmac("sha256", secret).update(openId).digest("hex");
+  if (sig.length !== expected.length) return null;
+
+  const ok = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig));
   return ok ? openId : null;
 }
