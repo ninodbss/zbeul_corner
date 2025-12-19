@@ -1,4 +1,4 @@
-import sounds from "../../data/sounds.json";
+﻿import sounds from "../../data/sounds.json";
 import crypto from "crypto";
 import { getOpenIdFromSession } from "../../lib/session";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
@@ -14,7 +14,7 @@ function makeLinkCode(openId: string, secret: string) {
 }
 
 export default async function MePage() {
-  const openId = getOpenIdFromSession();
+  const openId = await getOpenIdFromSession(); // ✅ IMPORTANT: await
   if (!openId) {
     return (
       <main>
@@ -32,7 +32,9 @@ export default async function MePage() {
     sb.from("user_sounds").select("sound_id").eq("open_id", openId).maybeSingle()
   ]);
 
-  const linkCode = makeLinkCode(openId, process.env.SESSION_SECRET ?? "dev");
+  const secret = process.env.SESSION_SECRET ?? "dev";
+  const linkCode = makeLinkCode(openId, secret);
+
   const list = sounds as unknown as Sound[];
   const chosen = sel?.sound_id ? list.find((x) => x.id === sel.sound_id) ?? null : null;
 
