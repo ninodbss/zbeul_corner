@@ -14,7 +14,7 @@ export async function setSession(openId: string) {
 
   const value = sign(openId, secret);
 
-  const cookieStore = await cookies(); // Next 15: cookies() is async
+  const cookieStore = await cookies(); // ✅ Next 15
   cookieStore.set(COOKIE_NAME, value, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -25,7 +25,7 @@ export async function setSession(openId: string) {
 }
 
 export async function clearSession() {
-  const cookieStore = await cookies();
+  const cookieStore = await cookies(); // ✅ Next 15
   cookieStore.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -39,7 +39,7 @@ export async function getOpenIdFromSession(): Promise<string | null> {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("Missing SESSION_SECRET");
 
-  const cookieStore = await cookies();
+  const cookieStore = await cookies(); // ✅ Next 15
   const v = cookieStore.get(COOKIE_NAME)?.value;
   if (!v) return null;
 
