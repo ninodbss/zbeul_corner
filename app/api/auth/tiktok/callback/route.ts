@@ -13,7 +13,9 @@ export async function GET(req: Request) {
 
   if (error) return NextResponse.json({ error, errorDescription }, { status: 400 });
 
-  const cookieState = cookies().get("tt_state")?.value;
+  const cookieStore = await cookies();
+  const cookieState = cookieStore.get("tt_state")?.value;
+
   if (!cookieState || !state || cookieState !== state) {
     return NextResponse.json({ error: "invalid_state" }, { status: 400 });
   }
@@ -24,13 +26,17 @@ export async function GET(req: Request) {
   const user = await fetchUserInfo(token.access_token);
 
   const sb = supabaseAdmin();
-  await sb.from("users").upsert({
-    open_id: user.open_id,
-    union_id: user.union_id ?? null,
-    display_name: user.display_name ?? "TikTok user",
-    avatar_url: user.avatar_url ?? null
-  }, { onConflict: "open_id" });
+  await sb.from("users").upsert(
+    {
+      open_id: user.open_id,
+      union_id: user.union_id ?? null,
+      display_name: user.display_name ?? "TikTok user",
+      avatar_url: user.avatar_url ?? null,
+    },
+    { onConflict: "open_id" }
+  );
 
-  setSession(user.open_id);
+  await setSession(user.open_id);
   return NextResponse.redirect(new URL("/sounds", req.url));
 }
+
