@@ -1,4 +1,4 @@
-import sounds from "../../data/sounds.json";
+﻿import sounds from "../../data/sounds.json";
 import { getOpenIdFromSession } from "../../lib/session";
 import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
@@ -13,7 +13,7 @@ type Sound = {
 };
 
 export default async function SoundsPage() {
-  const openId = getOpenIdFromSession();
+  const openId = await getOpenIdFromSession();
   let selected: string | null = null;
 
   if (openId) {
@@ -28,12 +28,12 @@ export default async function SoundsPage() {
     <main>
       <h1>Catalogue (CML)</h1>
       <p style={{ lineHeight: 1.5 }}>
-        Tu sélectionnes un son dans ta liste curée (pas de scraping).
+        Tu sÃ©lectionnes un son dans ta liste curÃ©e (pas de scraping).
       </p>
 
       {!openId && (
         <div style={{ padding: 12, border: "1px solid #ffd6d6", borderRadius: 10, background: "#fff7f7" }}>
-          <b>Tu n’es pas connecté.</b> <a href="/api/auth/tiktok">Connecte-toi avec TikTok</a> pour enregistrer ton choix.
+          <b>Tu nâ€™es pas connectÃ©.</b> <a href="/api/auth/tiktok">Connecte-toi avec TikTok</a> pour enregistrer ton choix.
         </div>
       )}
 
@@ -41,7 +41,7 @@ export default async function SoundsPage() {
         {list.map((s) => (
           <div key={s.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
             <div style={{ fontWeight: 700 }}>{s.title}</div>
-            <div style={{ opacity: 0.8, fontSize: 13 }}>{s.artist ?? "—"}</div>
+            <div style={{ opacity: 0.8, fontSize: 13 }}>{s.artist ?? "â€”"}</div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
               {s.cmlUrl ? (
@@ -66,7 +66,7 @@ export default async function SoundsPage() {
                       color: selected === s.id ? "white" : "black"
                     }}
                   >
-                    {selected === s.id ? "Sélectionné ✅" : "Choisir"}
+                    {selected === s.id ? "SÃ©lectionnÃ© âœ…" : "Choisir"}
                   </button>
                 </form>
               ) : null}
@@ -77,3 +77,5 @@ export default async function SoundsPage() {
     </main>
   );
 }
+
+
