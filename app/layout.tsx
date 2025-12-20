@@ -1,11 +1,9 @@
-﻿// app/layout.tsx
-import "./globals.css";
+﻿import "./globals.css";
 import Link from "next/link";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Marble Live — Sound Picker",
-  description: "Choisis un son CML pour ta bille leader (TikTok).",
+  description: "Choisis ton son de leader (TikTok CML).",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -13,31 +11,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <header className="topbar">
-          <div className="container">
-            <div className="topbar-inner">
-              <Link href="/" className="brand">
-                <span className="logo-dot" />
-                <div>
-                  <div className="brand-title">Marble Live</div>
-                  <span className="brand-sub">Commercial Music Library only</span>
-                </div>
-              </Link>
+          <div className="container topbar-inner">
+            <Link className="brand" href="/">
+              <span className="brand-dot" />
+              <span>Marble Live</span>
+              <span className="badge-mini">Commercial Music Library</span>
+            </Link>
 
-              <nav className="nav">
-                <Link href="/sounds">Sons</Link>
-                <Link href="/me">Mon profil</Link>
-              </nav>
-            </div>
+            <nav className="nav">
+              <Link href="/sounds">Sons</Link>
+              <Link href="/me">Mon profil</Link>
+            </nav>
           </div>
         </header>
 
-        <main>
-          <div className="container">{children}</div>
-        </main>
+        <main className="container main">{children}</main>
+
+        <footer className="footer">
+          MVP — sons issus d’une liste curée (TikTok Commercial Music Library).
+        </footer>
       </body>
     </html>
   );
 }
-
-
-
