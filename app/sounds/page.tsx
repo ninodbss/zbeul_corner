@@ -1,167 +1,80 @@
-﻿import sounds from "@/data/sounds.json";
-import { getOpenIdFromSession } from "@/lib/session";
-import { getSelectedSound } from "@/lib/supabaseAdmin";
+﻿import sounds from "../../data/sounds.json";
+import { getOpenIdFromSession } from "../../lib/session";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
 type Sound = {
   id: string;
   title: string;
   artist?: string;
-  url: string;
+  durationSec?: number;
   region?: string;
+  cmlUrl?: string;
+  tags?: string[];
 };
 
 export default async function SoundsPage() {
   const openId = getOpenIdFromSession();
-  const selected = openId ? await getSelectedSound(openId) : null;
-  const list = sounds as Sound[];
+  let selected: string | null = null;
+
+  if (openId) {
+    const sb = supabaseAdmin();
+    const { data } = await sb
+      .from("user_sounds")
+      .select("sound_id")
+      .eq("open_id", openId)
+      .maybeSingle();
+
+    selected = data?.sound_id ?? null;
+  }
+
+  const list = (sounds as unknown as Sound[]);
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Catalogue (CML)</h1>
-          <p className="mt-2 text-sm text-neutral-300">
-            Tu sélectionnes un son dans ta liste curée (pas de scraping).
-          </p>
-        </div>
+    <main>
+      <h1>Catalogue (CML)</h1>
+      <p style={{ lineHeight: 1.5 }}>
+        Tu sélectionnes un son dans ta liste curée (pas de scraping).
+      </p>
 
-        <a
-          href="https://ads.tiktok.com/business/creativecenter/music"
-          target="_blank"
-          className="text-sm text-neutral-300 hover:text-white"
-        >
-          Creative Center ↗
-        </a>
-      </div>
-
-      {!openId ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm">
-          <span className="font-medium">Tu n’es pas connecté.</span>{" "}
-          <a className="underline hover:no-underline" href="/api/auth/tiktok">
-            Connecte-toi avec TikTok
-          </a>{" "}
-          pour enregistrer ton choix.
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
-          <span className="font-medium">Connecté ✅</span>{" "}
-          {selected ? (
-            <span className="text-neutral-200">
-              Ton choix actuel : <span className="font-semibold">{selected.title}</span>
-            </span>
-          ) : (
-            <span className="text-neutral-200">Aucun son choisi pour l’instant.</span>
-          )}
+      {!openId && (
+        <div style={{ padding: 12, border: "1px solid #ffd6d6", borderRadius: 10, background: "#fff7f7" }}>
+          <b>Tu n’es pas connecté.</b> <a href="/api/auth/tiktok">Connecte-toi avec TikTok</a> pour enregistrer ton choix.
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginTop: 14 }}>
         {list.map((s) => (
-          <div key={s.id} className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5">
-            <div className="flex items-start justify-between gap-3">
-Copy-Item .\app\sounds\page.tsx .\app\sounds\page.tsx.bak -ErrorAction SilentlyContinue
+          <div key={s.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
+            <div style={{ fontWeight: 700 }}>{s.title}</div>
+            <div style={{ opacity: 0.8, fontSize: 13 }}>{s.artist ?? "—"}</div>
 
-@'
-import sounds from "@/data/sounds.json";
-import { getOpenIdFromSession } from "@/lib/session";
-import { getSelectedSound } from "@/lib/supabaseAdmin";
-
-type Sound = {
-  id: string;
-  title: string;
-  artist?: string;
-  url: string;
-  region?: string;
-};
-
-export default async function SoundsPage() {
-  const openId = getOpenIdFromSession();
-  const selected = openId ? await getSelectedSound(openId) : null;
-  const list = sounds as Sound[];
-
-  return (
-    <main className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Catalogue (CML)</h1>
-          <p className="mt-2 text-sm text-neutral-300">
-            Tu sélectionnes un son dans ta liste curée (pas de scraping).
-          </p>
-        </div>
-
-        <a
-          href="https://ads.tiktok.com/business/creativecenter/music"
-          target="_blank"
-          className="text-sm text-neutral-300 hover:text-white"
-        >
-          Creative Center ↗
-        </a>
-      </div>
-
-      {!openId ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm">
-          <span className="font-medium">Tu n’es pas connecté.</span>{" "}
-          <a className="underline hover:no-underline" href="/api/auth/tiktok">
-            Connecte-toi avec TikTok
-          </a>{" "}
-          pour enregistrer ton choix.
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
-          <span className="font-medium">Connecté ✅</span>{" "}
-          {selected ? (
-            <span className="text-neutral-200">
-              Ton choix actuel : <span className="font-semibold">{selected.title}</span>
-            </span>
-          ) : (
-            <span className="text-neutral-200">Aucun son choisi pour l’instant.</span>
-          )}
-        </div>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {list.map((s) => (
-          <div key={s.id} className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-base font-semibold leading-tight">{s.title}</div>
-                <div className="mt-1 text-sm text-neutral-400">{s.artist ?? "TikTok CML"}</div>
-              </div>
-
-              {selected?.id === s.id ? (
-                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
-                  Sélectionné
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <a
-                href={s.url}
-                target="_blank"
-                className="inline-flex items-center justify-center rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 text-sm hover:bg-neutral-900"
-              >
-                Ouvrir
-              </a>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+              {s.cmlUrl ? (
+                <a href={s.cmlUrl} target="_blank" rel="noreferrer">
+                  Ouvrir dans Creative Center
+                </a>
+              ) : (
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Lien Creative Center non fourni</span>
+              )}
 
               {openId ? (
-                <form action="/api/select-sound" method="post" className="flex-1">
+                <form action="/api/select-sound" method="post" style={{ marginLeft: "auto" }}>
                   <input type="hidden" name="sound_id" value={s.id} />
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-medium text-black hover:bg-neutral-200"
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid #ccc",
+                      cursor: "pointer",
+                      background: selected === s.id ? "black" : "white",
+                      color: selected === s.id ? "white" : "black"
+                    }}
                   >
-                    Choisir
+                    {selected === s.id ? "Sélectionné ✅" : "Choisir"}
                   </button>
                 </form>
-              ) : (
-                <a
-                  href="/api/auth/tiktok"
-                  className="inline-flex flex-1 items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-medium text-black hover:bg-neutral-200"
-                >
-                  Se connecter
-                </a>
-              )}
+              ) : null}
             </div>
           </div>
         ))}
