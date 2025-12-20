@@ -1,52 +1,76 @@
-﻿export default function Home() {
+﻿import Link from "next/link";
+import { getSession } from "@/lib/session";
+
+export default async function HomePage() {
+  const session = await getSession();
+  const connected = Boolean((session as any)?.open_id || (session as any)?.openId);
+
   return (
-    <main className="space-y-6">
-      <div className="rounded-3xl border border-neutral-800 bg-neutral-900/40 p-6 sm:p-8">
-        <div className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-950/60 px-3 py-1 text-xs text-neutral-300">
-          <span>🎵</span>
-          <span>Commercial Music Library only</span>
+    <section className="stack">
+      <div className="card hero">
+        <div className="hero-top">
+          <div>
+            <h1>Choisis ton son de leader 🥇</h1>
+            <p className="p">
+              Connecte ton TikTok, puis choisis un son (CML). Quand ta bille passe leader en live,
+              le jeu peut déclencher le son associé.
+            </p>
+          </div>
+
+          <span className={`badge ${connected ? "badge-ok" : "badge-warn"}`}>
+            {connected ? "Connecté" : "Non connecté"}
+          </span>
         </div>
 
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-          Choisis ton son de leader <span className="align-middle">🥇</span>
-        </h1>
-
-        <p className="mt-3 max-w-prose text-neutral-300 leading-relaxed">
-          Connecte ton TikTok, puis choisis un son (CML). Quand ta bille passe leader sur le live,
-          le jeu peut déclencher le son associé.
-        </p>
-
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <a
-            href="/api/auth/tiktok"
-            className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black hover:bg-neutral-200"
-          >
+        <div className="actions">
+          <a className="btn btn-primary" href="/api/auth/tiktok">
             Continuer avec TikTok
           </a>
-
-          <a
-            href="/sounds"
-            className="inline-flex items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-950/40 px-4 py-3 text-sm font-medium text-white hover:bg-neutral-900/40"
-          >
+          <Link className="btn btn-ghost" href="/sounds">
             Voir la liste des sons
-          </a>
+          </Link>
+          <Link className="btn" href="/me">
+            Mon profil
+          </Link>
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5">
-          <div className="text-sm font-semibold">Pourquoi la CML ?</div>
-          <p className="mt-2 text-sm text-neutral-300 leading-relaxed">
-            Option la plus safe sur TikTok : sons pré-cleared pour usage commercial sur la plateforme.
-          </p>
+      {!connected && (
+        <div className="alert">
+          <div>
+            <strong>Astuce :</strong> connecte-toi d’abord pour enregistrer ton choix dans Supabase.
+          </div>
+          <a className="btn btn-sm btn-primary" href="/api/auth/tiktok">Se connecter</a>
         </div>
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-950/40 p-5">
-          <div className="text-sm font-semibold">Stockage</div>
-          <p className="mt-2 text-sm text-neutral-300 leading-relaxed">
-            Ton choix est enregistré sur le site (Supabase). Le jeu récupère le son par ton open_id.
-          </p>
+      )}
+
+      <div className="grid">
+        <div className="card feature col4">
+          <h2>Pourquoi la CML ?</h2>
+          <p>La voie la plus “safe” sur TikTok : sons prévus pour usage commercial sur la plateforme.</p>
         </div>
-      </section>
-    </main>
+
+        <div className="card feature col4">
+          <h2>Stockage</h2>
+          <p>Ton choix est enregistré sur le site (Supabase). Le jeu récupère le son via ton open_id.</p>
+        </div>
+
+        <div className="card feature col4">
+          <h2>MVP</h2>
+          <p>Catalogue curé (TikTok Commercial Music Library). Simple, rapide, fiable.</p>
+        </div>
+      </div>
+
+      <div className="card feature">
+        <h2>Besoin d’aide ?</h2>
+        <p>
+          Si “Continuer avec TikTok” te renvoie une erreur, c’est quasi toujours les variables d’environnement
+          ou le redirect URL côté TikTok Developer.
+        </p>
+        <p style={{ marginTop: 10 }}>
+          <Link className="u" href="/sounds">Ouvrir le catalogue</Link>
+        </p>
+      </div>
+    </section>
   );
 }
