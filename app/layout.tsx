@@ -1,38 +1,43 @@
-﻿import "./globals.css";
+﻿// app/layout.tsx
+import "./globals.css";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Marble Live – Sound Picker",
-  description: "Connect TikTok and pick a Commercial Music Library track."
+  title: "Marble Live — Sound Picker",
+  description: "Choisis un son CML pour ta bille leader (TikTok).",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body className="min-h-screen bg-neutral-950 text-neutral-50 antialiased">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <header className="flex items-center justify-between gap-4">
-            <a href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="text-xl">🏁</span>
-              <span className="text-lg">Marble Live</span>
-            </a>
+      <body>
+        <header className="topbar">
+          <div className="container">
+            <div className="topbar-inner">
+              <Link href="/" className="brand">
+                <span className="logo-dot" />
+                <div>
+                  <div className="brand-title">Marble Live</div>
+                  <span className="brand-sub">Commercial Music Library only</span>
+                </div>
+              </Link>
 
-            <nav className="flex items-center gap-4 text-sm text-neutral-300">
-              <a className="hover:text-white" href="/sounds">Sons</a>
-              <a className="hover:text-white" href="/me">Mon profil</a>
-            </nav>
-          </header>
+              <nav className="nav">
+                <Link href="/sounds">Sons</Link>
+                <Link href="/me">Mon profil</Link>
+              </nav>
+            </div>
+          </div>
+        </header>
 
-          <div className="my-6 h-px w-full bg-neutral-800" />
-
-          {children}
-
-          <div className="mt-10 h-px w-full bg-neutral-800" />
-          <footer className="mt-4 text-xs text-neutral-400">
-            MVP – sons issus d’une liste curée (TikTok Commercial Music Library).
-          </footer>
-        </div>
+        <main>
+          <div className="container">{children}</div>
+        </main>
       </body>
     </html>
   );
 }
+
+
+
