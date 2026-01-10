@@ -1,26 +1,22 @@
 [
-  {
-    "id": "cml_demo_01",
-    "title": "Neon Sprint",
-    "artist": "TikTok CML (example)",
-    "durationSec": 15,
-    "region": "FR",
-    "cmlUrl": "https://ads.tiktok.com/business/creativecenter/music/pc/en",
-    "tags": [
-      "game",
-      "energetic"
-    ]
-  },
-  {
-    "id": "cml_demo_02",
-    "title": "Soft Victory Sting",
-    "artist": "TikTok CML (example)",
-    "durationSec": 6,
-    "region": "FR",
-    "cmlUrl": "https://ads.tiktok.com/business/creativecenter/music/pc/en",
-    "tags": [
-      "win",
-      "short"
-    ]
-  }
+  { "id": "neon_sprint", "title": "Neon Sprint", "artist": "TikTok CML", "url": "/sounds/neon_sprint.mp3", "tags": ["énergie","course","intro"] },
+  { "id": "soft_victory", "title": "Soft Victory Sting", "artist": "TikTok CML", "url": "/sounds/soft_victory.mp3", "tags": ["victoire","stinger","leader"] },
+
+  { "id": "hype_drop_01", "title": "Hype Drop 01", "artist": "TikTok CML", "url": "/sounds/hype_drop_01.mp3", "tags": ["hype","drop","énergie"] },
+  { "id": "comedy_pop", "title": "Comedy Pop", "artist": "TikTok CML", "url": "/sounds/comedy_pop.mp3", "tags": ["drôle","pop","reaction"] },
+  { "id": "suspense_tick", "title": "Suspense Tick", "artist": "TikTok CML", "url": "/sounds/suspense_tick.mp3", "tags": ["suspense","tension"] },
+  { "id": "clutch_moment", "title": "Clutch Moment", "artist": "TikTok CML", "url": "/sounds/clutch_moment.mp3", "tags": ["clutch","final","tension"] },
+  { "id": "mega_win", "title": "Mega Win", "artist": "TikTok CML", "url": "/sounds/mega_win.mp3", "tags": ["victoire","hype"] },
+  { "id": "sad_trombone", "title": "Sad Trombone", "artist": "TikTok CML", "url": "/sounds/sad_trombone.mp3", "tags": ["perte","drôle"] },
+  { "id": "laser_zap", "title": "Laser Zap", "artist": "TikTok CML", "url": "/sounds/laser_zap.mp3", "tags": ["sfx","impact"] },
+  { "id": "whoosh_transition", "title": "Whoosh Transition", "artist": "TikTok CML", "url": "/sounds/whoosh_transition.mp3", "tags": ["transition","sfx"] },
+
+  { "id": "leader_change_01", "title": "Leader Change 01", "artist": "TikTok CML", "url": "/sounds/leader_change_01.mp3", "tags": ["leader","stinger"] },
+  { "id": "leader_change_02", "title": "Leader Change 02", "artist": "TikTok CML", "url": "/sounds/leader_change_02.mp3", "tags": ["leader","stinger"] },
+  { "id": "photo_finish", "title": "Photo Finish", "artist": "TikTok CML", "url": "/sounds/photo_finish.mp3", "tags": ["final","tension"] },
+  { "id": "crowd_gasp", "title": "Crowd Gasp", "artist": "TikTok CML", "url": "/sounds/crowd_gasp.mp3", "tags": ["reaction","sfx"] },
+  { "id": "applause_short", "title": "Applause Short", "artist": "TikTok CML", "url": "/sounds/applause_short.mp3", "tags": ["victoire","reaction"] },
+  { "id": "bass_hit", "title": "Bass Hit", "artist": "TikTok CML", "url": "/sounds/bass_hit.mp3", "tags": ["impact","sfx"] },
+  { "id": "coin_collect", "title": "Coin Collect", "artist": "TikTok CML", "url": "/sounds/coin_collect.mp3", "tags": ["sfx","drôle"] },
+  { "id": "level_up", "title": "Level Up", "artist": "TikTok CML", "url": "/sounds/level_up.mp3", "tags": ["hype","victoire"] }
 ]

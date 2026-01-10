@@ -11,7 +11,9 @@ export async function GET(req: Request) {
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
-  if (error) return NextResponse.json({ error, errorDescription }, { status: 400 });
+  if (error) {
+    return NextResponse.json({ error, errorDescription }, { status: 400 });
+  }
 
   const cookieStore = await cookies();
   const cookieState = cookieStore.get("tt_state")?.value;
@@ -20,23 +22,33 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "invalid_state" }, { status: 400 });
   }
 
-  if (!code) return NextResponse.json({ error: "missing_code" }, { status: 400 });
+  if (!code) {
+    return NextResponse.json({ error: "missing_code" }, { status: 400 });
+  }
 
   const token = await exchangeCodeForToken(code);
   const user = await fetchUserInfo(token.access_token);
 
   const sb = supabaseAdmin();
-  await sb.from("users").upsert(
+
+  // ✅ cast any pour éviter le "never" tant que tu n'as pas de types Supabase générés
+  await (sb as any).from("users").upsert(
     {
       open_id: user.open_id,
       union_id: user.union_id ?? null,
-      display_name: user.display_name ?? "TikTok user",
+      display_name: user.display_name ?? null,
       avatar_url: user.avatar_url ?? null,
     },
     { onConflict: "open_id" }
   );
 
+  // ✅ session cookie
   await setSession(user.open_id);
-  return NextResponse.redirect(new URL("/sounds", req.url));
+
+  // (optionnel) tu peux nettoyer le state cookie
+  cookieStore.set("tt_state", "", { path: "/", maxAge: 0 });
+
+  // ✅ retour à la home
+  return NextResponse.redirect(new URL("/", req.url));
 }
 
