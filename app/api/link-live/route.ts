@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { getOpenIdFromSession } from "../../../lib/session";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
@@ -16,7 +18,6 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const username = normalizeUsername(String(body?.username || ""));
-
   if (!username) return NextResponse.json({ error: "missing_username" }, { status: 400 });
 
   const sb = supabaseAdmin();
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     .from("tikfinity_events")
     .select("provider_user_id, username, created_at")
     .eq("provider", "tikfinity")
-    .eq("username", username)
+    .eq("username", username) // <= le plus fiable si tu stockes déjà en lowercase
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -38,30 +39,33 @@ export async function POST(req: Request) {
   const provider_user_id = String(ev.provider_user_id);
 
   // 2) Upsert du lien (open_id -> provider_user_id)
-  // OnConflict sur (provider, open_id) : un open_id = un compte live
-  const { error } = await (sb as any)
-    .from("live_links")
-    .upsert(
-      {
-        provider: "tikfinity",
-        open_id,
-        provider_user_id,
-        username,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "provider,open_id" }
-    );
-
-  if (error) {
-    // typiquement : provider_user_id déjà pris par un autre open_id (unique)
-    return NextResponse.json({ error: "link_failed", details: String(error.message ?? error) }, { status: 409 });
-  }
-
-  return NextResponse.json({
-    ok: true,
+  // => on update toujours le lien de CE open_id
+  // => si provider_user_id est déjà pris (unique côté DB), ça renvoie une erreur => "link_failed"
+  const payload: any = {
     provider: "tikfinity",
     open_id,
     provider_user_id,
     username,
-  });
+    // utilise un champ qui existe chez toi :
+    // last_seen_at: new Date().toISOString(),
+    // ou updated_at si tu l'as :
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await (sb as any)
+    .from("live_links")
+    .upsert(payload, { onConflict: "open_id" });
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error: "link_failed",
+        details: String(error.message ?? error),
+        hint: "Si ton live est déjà lié à quelqu'un d'autre, utilise la commande !link dans le chat pour récupérer.",
+      },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, provider: "tikfinity", open_id, provider_user_id, username });
 }

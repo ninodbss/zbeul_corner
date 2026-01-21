@@ -1,7 +1,7 @@
-﻿import sounds from "../../data/sounds.json";
-import { getOpenIdFromSession } from "../../lib/session";
-import { supabaseAdmin } from "../../lib/supabaseAdmin";
-import LinkCodeForm from "./LinkCodeForm";
+﻿import sounds from "@/data/sounds.json";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getOpenIdFromSession } from "@/lib/session";
+import LinkLiveForm from "./LinkLiveForm";
 
 type Sound = { id: string; title: string; artist?: string };
 
@@ -20,7 +20,7 @@ export default async function MePage() {
 
   const sb = supabaseAdmin();
 
-  const [{ data: user }, { data: sel }, { data: link }] = await Promise.all([
+  const [{ data: user }, { data: sel }, { data: liveLink }] = await Promise.all([
     (sb as any).from("users").select("display_name,avatar_url").eq("open_id", openId).maybeSingle(),
     (sb as any).from("user_sounds").select("sound_id").eq("open_id", openId).maybeSingle(),
     (sb as any)
@@ -39,25 +39,31 @@ export default async function MePage() {
       <h1>Mon profil</h1>
       <p style={{ opacity: 0.8, fontSize: 13 }}>open_id: {openId.slice(0, 8)}…</p>
 
-      <div style={{ marginTop: 18, padding: 14, border: "1px solid #eee", borderRadius: 12 }}>
-        <div style={{ fontWeight: 800 }}>Statut live</div>
-        <div style={{ marginTop: 6, fontSize: 13, opacity: 0.85 }}>
-          {link?.provider_user_id ? (
-            <>
-              ✅ Lié à <code>{link.username || "(username inconnu)"}</code> — provider_user_id:{" "}
-              <code>{link.provider_user_id}</code>
-              {link.last_seen_at ? <> (last_seen: {String(link.last_seen_at)})</> : null}
-            </>
-          ) : (
-            <>❌ Pas encore lié.</>
-          )}
+      <div style={{ marginTop: 18, padding: 14, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12 }}>
+        <div style={{ fontWeight: 700 }}>Statut live</div>
+        {liveLink?.provider_user_id ? (
+          <div style={{ marginTop: 6 }}>
+            ✅ Lié — <span style={{ opacity: 0.85 }}>@{liveLink.username}</span>{" "}
+            <span style={{ opacity: 0.6, fontSize: 12 }}>({liveLink.provider_user_id})</span>
+          </div>
+        ) : (
+          <div style={{ marginTop: 6, color: "#FF7C7C" }}>❌ Pas encore lié.</div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 18, padding: 14, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12 }}>
+        <div style={{ fontWeight: 700 }}>Lier mon live (sans code)</div>
+        <div style={{ fontSize: 13, opacity: 0.75, marginTop: 6 }}>
+          Entre ton @username TikTok (une seule fois). On va chercher ton ID TikFinity via les derniers events (join/like/chat),
+          puis lier ton open_id à cet ID.
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <LinkLiveForm initialUsername={liveLink?.username ?? ""} />
         </div>
       </div>
 
-      {/* ✅ Option A: formulaire username */}
-      <LinkCodeForm />
-
-      <div style={{ marginTop: 18, padding: 14, border: "1px solid #eee", borderRadius: 12 }}>
+      <div style={{ marginTop: 18, padding: 14, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12 }}>
         <div style={{ fontWeight: 700 }}>Son sélectionné</div>
         <div style={{ marginTop: 6 }}>
           {chosen ? (
@@ -75,10 +81,7 @@ export default async function MePage() {
 
       <div style={{ marginTop: 18 }}>
         <form action="/api/logout" method="post">
-          <button
-            type="submit"
-            style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ccc", cursor: "pointer" }}
-          >
+          <button type="submit" style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #ccc", cursor: "pointer" }}>
             Se déconnecter
           </button>
         </form>

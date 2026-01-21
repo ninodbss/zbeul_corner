@@ -1,89 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-export default function LinkLiveForm({ alreadyLinked }: { alreadyLinked?: boolean }) {
-  const [username, setUsername] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
-  const [msg, setMsg] = useState<string>("");
+type Props = {
+  initialUsername?: string | null;
+};
+
+export default function LinkLiveForm({ initialUsername }: Props) {
+  const [username, setUsername] = useState(initialUsername ?? "");
+  const [loading, setLoading] = useState(false);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const cleaned = useMemo(() => username.trim(), [username]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
-    setMsg("");
+    setLoading(true);
+    setOkMsg(null);
+    setErrMsg(null);
 
     try {
-      const res = await fetch("/api/link-live", {
+      const res = await fetch("/api/live/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: cleaned }),
       });
 
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setStatus("error");
-        setMsg(json?.error || "Erreur inconnue");
+        setErrMsg(json?.error ?? "Erreur inconnue");
+        if (json?.hint) setErrMsg(`${json.error} — ${json.hint}`);
         return;
       }
 
-      setStatus("ok");
-      setMsg("Compte live lié ✅ (tu peux fermer et revenir plus tard, c’est enregistré)");
-      // petit refresh pour afficher le statut “lié” côté serveur
+      setOkMsg(`✅ Live lié ! (provider_user_id=${json.provider_user_id})`);
+      // refresh soft: pour que /me recharge le statut côté server
       window.location.reload();
-    } catch (err: any) {
-      setStatus("error");
-      setMsg(err?.message || "Erreur réseau");
+    } catch (e: any) {
+      setErrMsg(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+    <form onSubmit={onSubmit} style={{ display: "flex", gap: 10, alignItems: "center" }}>
       <input
         value={username}
         onChange={(e) => setUsername(e.target.value)}
-        placeholder="@monpseudo"
+        placeholder="@ton_username"
         style={{
+          flex: 1,
           padding: "10px 12px",
           borderRadius: 10,
-          border: "1px solid #ccc",
-          minWidth: 240,
+          border: "1px solid rgba(255,255,255,0.25)",
+          background: "rgba(0,0,0,0.25)",
+          color: "white",
         }}
       />
       <button
         type="submit"
-        disabled={status === "loading"}
+        disabled={loading || !cleaned}
         style={{
-          padding: "10px 12px",
+          padding: "10px 14px",
           borderRadius: 10,
-          border: "1px solid #333",
-          cursor: "pointer",
-          opacity: status === "loading" ? 0.6 : 1,
+          border: "1px solid rgba(255,255,255,0.25)",
+          cursor: loading ? "not-allowed" : "pointer",
         }}
       >
-        {alreadyLinked ? "Relier / mettre à jour" : "Lier mon compte live"}
+        {loading ? "..." : "Lier"}
       </button>
 
-      <div style={{ width: "100%" }}>
-        {status === "loading" ? (
-          <div style={{ fontSize: 13, opacity: 0.8 }}>Liaison en cours…</div>
-        ) : null}
-
-        {status === "ok" ? (
-          <div style={{ fontSize: 13, opacity: 0.9 }}>{msg}</div>
-        ) : null}
-
-        {status === "error" ? (
-          <div style={{ fontSize: 13, color: "#b00020" }}>
-            {msg === "no_recent_event_for_username"
-              ? "Je ne t’ai pas trouvé dans les events. Tape !join dans le live puis réessaie."
-              : msg}
-          </div>
-        ) : null}
-
-        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7, lineHeight: 1.35 }}>
-          Astuce : ton @username doit être exactement celui de TikTok (sans espace). Tu peux écrire avec ou sans “@”.
-        </div>
+      <div style={{ width: "100%", marginTop: 10 }}>
+        {okMsg ? <div style={{ color: "#7CFFB2" }}>{okMsg}</div> : null}
+        {errMsg ? <div style={{ color: "#FF7C7C" }}>❌ {errMsg}</div> : null}
       </div>
     </form>
   );
