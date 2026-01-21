@@ -235,8 +235,8 @@ export default async function SoundsPage({
                 )}
 
                 {/* On garde un form classique vers /api/select-sound (fonctionne partout) */}
-                <form action="/api/select-sound" method="post">
-                  <input type="hidden" name="soundId" value={s.id} />
+                <form action="/api/sounds/select" method="post">
+                  <input type="hidden" name="sound_id" value={s.id} />
                   <button className="btn btn-primary" type="submit" disabled={!connected}>
                     Choisir
                   </button>
