@@ -1,116 +1,133 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getOpenIdFromSession } from "@/lib/session";
 
+function normalizeUsername(input: string) {
+  return input.trim().replace(/^@+/, "").toLowerCase();
+}
+
 /**
  * POST /api/live/link
- * Body: { username: string }  // accepte "@xxx" ou "xxx"
+ * Body: { username: string } // "@xxx" ou "xxx"
  *
- * Logique Option A (sans PIN):
- * - on cherche le dernier event tikfinity_events pour ce username
- * - on récupère provider_user_id
- * - on lie open_id <-> provider_user_id dans live_links
- * - sécurité: si ce provider_user_id est déjà lié à un autre open_id => refuse (anti-usurpation)
+ * Option A (sans PIN):
+ * - trouve le dernier event dans tikfinity_events pour ce username
+ * - récupère provider_user_id
+ * - lie open_id <-> provider_user_id dans live_links
+ * - anti-usurpation: si provider_user_id déjà lié à un autre open_id => refuse (409)
+ *
+ * IMPORTANT: ta table live_links a updated_at (pas last_seen_at)
+ * Et tes contraintes: PK(provider, provider_user_id) + unique(provider, open_id)
  */
 export async function POST(req: Request) {
-  const openId = await getOpenIdFromSession();
-  if (!openId) {
-    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
-  }
+  try {
+    const open_id = await getOpenIdFromSession();
+    if (!open_id) {
+      return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
+    }
 
-  const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const username = normalizeUsername(String(body?.username ?? ""));
+    if (!username) {
+      return NextResponse.json({ error: "missing_username" }, { status: 400 });
+    }
 
-  // username normalisé: sans "@", trim, lower
-  const raw = String(body?.username ?? "");
-  const username = raw.replace(/^@/, "").trim().toLowerCase();
+    const sb = supabaseAdmin();
 
-  if (!username) {
-    return NextResponse.json({ error: "missing_username" }, { status: 400 });
-  }
+    // 1) Dernier event pour ce username (join/like/chat...)
+    const { data: ev, error: evErr } = await (sb as any)
+      .from("tikfinity_events")
+      .select("provider_user_id, username, event_type, created_at, nickname, avatar_url")
+      .eq("provider", "tikfinity")
+      .ilike("username", username)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const sb = supabaseAdmin();
+    if (evErr) {
+      return NextResponse.json(
+        { error: "db_error", details: String(evErr?.message ?? evErr) },
+        { status: 500 }
+      );
+    }
 
-  // 1) Dernier event (join/like/chat...) pour ce username
-  const { data: ev, error: evErr } = await (sb as any)
-    .from("tikfinity_events")
-    .select("provider_user_id, username, event_type, created_at, nickname, avatar_url")
-    .eq("provider", "tikfinity")
-    .ilike("username", username)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    if (!ev?.provider_user_id) {
+      return NextResponse.json(
+        {
+          error: "no_recent_event_for_username",
+          hint:
+            "Ce @username n'a pas été vu récemment. Fais un join/like/chat en live (ou via ton endpoint bridge/event) pour créer un event, puis réessaie.",
+        },
+        { status: 404 }
+      );
+    }
 
-  if (evErr) {
+    const provider_user_id = String(ev.provider_user_id);
+    const seenAt = ev.created_at ?? new Date().toISOString();
+
+    // 2) Anti-usurpation: si ce provider_user_id est déjà lié à un AUTRE open_id => refuse
+    const { data: existing, error: exErr } = await (sb as any)
+      .from("live_links")
+      .select("open_id, username, updated_at")
+      .eq("provider", "tikfinity")
+      .eq("provider_user_id", provider_user_id)
+      .maybeSingle();
+
+    if (exErr) {
+      return NextResponse.json(
+        { error: "db_error", details: String(exErr?.message ?? exErr) },
+        { status: 500 }
+      );
+    }
+
+    if (existing?.open_id && existing.open_id !== open_id) {
+      return NextResponse.json(
+        {
+          error: "already_linked",
+          hint:
+            "Ce compte live est déjà lié à un autre compte du site. (Plus tard: récupération via commande !link en chat).",
+        },
+        { status: 409 }
+      );
+    }
+
+    // 3) Upsert du lien pour CET open_id (unique sur provider+open_id)
+    // -> permet à l'utilisateur de relier son open_id à un nouveau provider_user_id si besoin
+    const payload = {
+      provider: "tikfinity",
+      open_id,
+      provider_user_id,
+      username, // normalisé
+      nickname: ev.nickname ?? null,
+      avatar_url: ev.avatar_url ?? null,
+      updated_at: seenAt,
+    };
+
+    const { error: upErr } = await (sb as any)
+      .from("live_links")
+      .upsert(payload, { onConflict: "provider,open_id" });
+
+    if (upErr) {
+      return NextResponse.json(
+        { error: "db_error", details: String(upErr?.message ?? upErr) },
+        { status: 500 }
+      );
+    }
+    const BUILD_TAG = "LIVE_LINK_V2_NO_LAST_SEEN_AT";
+    return NextResponse.json({
+        ok: true,
+        build: BUILD_TAG,
+        provider: "tikfinity",
+        provider_user_id,
+        username,
+        updated_at: payload.updated_at,
+    });
+  } catch (e: any) {
     return NextResponse.json(
-      { error: "db_error", details: String(evErr?.message ?? evErr) },
-      { status: 500 }
+        { error: "server_error", build: "LIVE_LINK_V2_NO_LAST_SEEN_AT", details: String(e?.message ?? e) },
+        { status: 500 }
     );
   }
-
-  if (!ev?.provider_user_id) {
-    return NextResponse.json(
-      {
-        error: "no_recent_event_for_username",
-        hint:
-          "Ce @username n'a pas été vu récemment. Fais un join/like/comment en live (ou sur ton test live) pour générer un event TikFinity, puis réessaie.",
-      },
-      { status: 404 }
-    );
-  }
-
-  const provider_user_id = String(ev.provider_user_id);
-
-  // 2) Anti-usurpation: si déjà lié à un autre open_id => refuse
-  const { data: existing, error: exErr } = await (sb as any)
-    .from("live_links")
-    .select("open_id, username, last_seen_at")
-    .eq("provider", "tikfinity")
-    .eq("provider_user_id", provider_user_id)
-    .maybeSingle();
-
-  if (exErr) {
-    return NextResponse.json(
-      { error: "db_error", details: String(exErr?.message ?? exErr) },
-      { status: 500 }
-    );
-  }
-
-  if (existing?.open_id && existing.open_id !== openId) {
-    return NextResponse.json(
-      {
-        error: "already_linked",
-        hint:
-          "Ce compte live est déjà lié à un autre compte du site. Si c'est toi, tu pourras le récupérer plus tard via une commande en chat (!link).",
-      },
-      { status: 409 }
-    );
-  }
-
-  // 3) Upsert du lien (libre ou déjà à toi)
-  const payload = {
-    provider: "tikfinity",
-    provider_user_id,
-    open_id: openId,
-    username, // username normalisé
-    last_seen_at: ev.created_at ?? new Date().toISOString(),
-  };
-
-  const { error: upErr } = await (sb as any)
-    .from("live_links")
-    .upsert(payload, { onConflict: "provider,provider_user_id" });
-
-  if (upErr) {
-    return NextResponse.json(
-      { error: "db_error", details: String(upErr?.message ?? upErr) },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    provider: "tikfinity",
-    provider_user_id,
-    username,
-    last_seen_at: payload.last_seen_at,
-  });
 }
