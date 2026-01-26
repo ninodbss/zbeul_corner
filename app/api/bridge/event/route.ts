@@ -3,54 +3,60 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-function authOk(req: Request) {
-  const url = new URL(req.url);
-  const key = url.searchParams.get("key") || req.headers.get("x-api-key");
-  return Boolean(key && key === process.env.BRIDGE_API_KEY);
+async function parseAnyBody(req: Request) {
+  const ct = (req.headers.get("content-type") || "").toLowerCase();
+
+  if (ct.includes("application/json")) {
+    return await req.json().catch(() => ({}));
+  }
+
+  const text = await req.text();
+
+  if (ct.includes("application/x-www-form-urlencoded")) {
+    return Object.fromEntries(new URLSearchParams(text));
+  }
+
+  // fallback debug
+  return { raw: text };
 }
 
-/**
- * POST /api/bridge/event
- * Header: x-api-key: BRIDGE_API_KEY
- * Body: { type: "join"|"like"|"chat", userId, username?, nickname?, avatar_url? }
- *
- * Insère un event dans la table `tikfinity_events` (celle que tu as déjà sur Supabase).
- */
 export async function POST(req: Request) {
-  if (!authOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const url = new URL(req.url);
 
-  const body = await req.json().catch(() => ({}));
+  // ✅ auth via query param (TikFinity can't send custom headers)
+  const k = url.searchParams.get("k");
+  if (!k || k !== process.env.BRIDGE_API_KEY) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
-  const event_type = String(body?.type || "").trim(); // join / like / chat
-  const provider_user_id = String(body?.userId || "").trim();
+  const body = await parseAnyBody(req);
 
-  // (optionnels)
-  const username = body?.username ? String(body.username).trim() : null;
-  const nickname = body?.nickname ? String(body.nickname).trim() : null;
-  const avatar_url = body?.avatar_url ? String(body.avatar_url).trim() : null;
+  // ✅ TikFinity envoie souvent ces clés (selon l’event)
+  const command = String(body.comment || body.text || body.message || "").trim();
+  const provider_user_id = String(body.userId || body.user_id || body.userid || "");
+  const username = String(body.username || body.uniqueId || body.unique_id || "").replace(/^@+/, "");
+  const nickname = String(body.nickname || body.displayName || body.display_name || "");
+  const avatar_url = String(body.avatar_url || body.profilePictureUrl || body.profile_picture_url || "");
 
-  if (!event_type) return NextResponse.json({ error: "missing_type" }, { status: 400 });
-  if (!provider_user_id) return NextResponse.json({ error: "missing_userId" }, { status: 400 });
+  // si c’est un webhook “commande”
+  const event_type = command.startsWith("!reclaim") ? "reclaim" : "chat";
 
   const sb = supabaseAdmin();
 
-  // ✅ IMPORTANT : ta table s'appelle tikfinity_events (pas live_events)
-  // Et côté link-live tu lis event_type + created_at, donc on écrit event_type
   const { error } = await (sb as any).from("tikfinity_events").insert({
     provider: "tikfinity",
-    provider_user_id,
-    username,
-    nickname,
-    avatar_url,
+    provider_user_id: provider_user_id || null,
+    username: username || null,
+    nickname: nickname || null,
+    avatar_url: avatar_url || null,
     event_type,
-    // created_at: inutile si ta colonne est "created_at" avec DEFAULT now()
-    // mais si tu veux forcer côté code:
-    // created_at: new Date().toISOString(),
+    message: command || null, // si t’as cette colonne, sinon enlève-la
+    created_at: new Date().toISOString(),
   });
 
   if (error) {
-    return NextResponse.json({ error: "insert_failed", detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: "db_error", details: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, received: { event_type, username, provider_user_id } });
 }
