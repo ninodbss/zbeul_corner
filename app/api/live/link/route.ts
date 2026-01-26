@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     const sb = supabaseAdmin();
 
-    // 1) Dernier event pour ce username (join/like/chat...)
+    // 1) Dernier event pour ce username
     const { data: ev, error: evErr } = await (sb as any)
       .from("tikfinity_events")
       .select("provider_user_id, username, event_type, created_at, nickname, avatar_url")
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         {
           error: "no_recent_event_for_username",
           hint:
-            "Ce @username n'a pas été vu récemment. Fais un join/like/chat en live (ou via ton endpoint bridge/event) pour créer un event, puis réessaie.",
+            "Ce @username n'a pas été vu récemment. Fais un join/like/chat en live (ou via /api/bridge/event) pour créer un event, puis réessaie.",
         },
         { status: 404 }
       );
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     const provider_user_id = String(ev.provider_user_id);
     const seenAt = ev.created_at ?? new Date().toISOString();
 
-    // 2) Anti-usurpation: si ce provider_user_id est déjà lié à un AUTRE open_id => refuse
+    // 2) Anti-usurpation: si provider_user_id déjà lié à un autre open_id => on crée une reclaim_request + 409
     const { data: existing, error: exErr } = await (sb as any)
       .from("live_links")
       .select("open_id, username, updated_at")
@@ -83,23 +83,41 @@ export async function POST(req: Request) {
     }
 
     if (existing?.open_id && existing.open_id !== open_id) {
+      const { error: rrErr } = await (sb as any)
+        .from("reclaim_requests")
+        .upsert(
+          {
+            provider: "tikfinity",
+            provider_user_id,
+            requested_open_id: open_id,
+            expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          },
+          { onConflict: "provider,provider_user_id" }
+        );
+
+      if (rrErr) {
+        return NextResponse.json(
+          { error: "db_error", details: String(rrErr?.message ?? rrErr) },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
         {
           error: "already_linked",
           hint:
-            "Ce compte live est déjà lié à un autre compte du site. (Plus tard: récupération via commande !link en chat).",
+            "Ce compte live est déjà lié à quelqu’un. Si c’est toi, tape !reclaim dans le chat du live dans les 10 minutes.",
         },
         { status: 409 }
       );
     }
 
     // 3) Upsert du lien pour CET open_id (unique sur provider+open_id)
-    // -> permet à l'utilisateur de relier son open_id à un nouveau provider_user_id si besoin
     const payload = {
       provider: "tikfinity",
       open_id,
       provider_user_id,
-      username, // normalisé
+      username,
       nickname: ev.nickname ?? null,
       avatar_url: ev.avatar_url ?? null,
       updated_at: seenAt,
@@ -115,19 +133,19 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-    const BUILD_TAG = "LIVE_LINK_V2_NO_LAST_SEEN_AT";
+
     return NextResponse.json({
-        ok: true,
-        build: BUILD_TAG,
-        provider: "tikfinity",
-        provider_user_id,
-        username,
-        updated_at: payload.updated_at,
+      ok: true,
+      build: "LIVE_LINK_V2_NO_LAST_SEEN_AT",
+      provider: "tikfinity",
+      provider_user_id,
+      username,
+      updated_at: payload.updated_at,
     });
   } catch (e: any) {
     return NextResponse.json(
-        { error: "server_error", build: "LIVE_LINK_V2_NO_LAST_SEEN_AT", details: String(e?.message ?? e) },
-        { status: 500 }
+      { error: "server_error", build: "LIVE_LINK_V2_NO_LAST_SEEN_AT", details: String(e?.message ?? e) },
+      { status: 500 }
     );
   }
 }

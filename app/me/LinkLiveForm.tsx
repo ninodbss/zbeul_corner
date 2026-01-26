@@ -1,162 +1,251 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React from "react";
 
-type Props = { initialUsername?: string };
-
-type SuggestItem = {
-  username: string;
-  provider_user_id: string;
-  nickname?: string | null;
-  avatar_url?: string | null;
-  last_seen_at?: string | null;
-  score?: number | null;
+type Props = {
+  initialUsername?: string;
 };
 
-function normalize(input: string) {
+type SuggestItem = {
+  provider_user_id: string;
+  username: string;
+  nickname?: string | null;
+  avatar_url?: string | null;
+  created_at?: string | null;
+};
+
+function normalizeUsername(input: string) {
   return input.trim().replace(/^@+/, "").toLowerCase();
 }
 
+function useDebounced<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = React.useState(value);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+function Avatar({ url, alt }: { url?: string | null; alt: string }) {
+  const [src, setSrc] = React.useState<string | null>(url ?? null);
+
+  React.useEffect(() => {
+    setSrc(url ?? null);
+  }, [url]);
+
+  if (!src) {
+    return (
+      <div
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.12)",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 12,
+          color: "rgba(255,255,255,0.8)",
+          flex: "0 0 auto",
+        }}
+        aria-hidden
+      >
+        {(alt?.[0] ?? "?").toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={26}
+      height={26}
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: 999,
+        objectFit: "cover",
+        background: "rgba(255,255,255,0.08)",
+        flex: "0 0 auto",
+      }}
+      referrerPolicy="no-referrer"
+      onError={() => setSrc(null)}
+    />
+  );
+}
+
 export default function LinkLiveForm({ initialUsername = "" }: Props) {
-  const [value, setValue] = useState(initialUsername);
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = React.useState(initialUsername);
+  const [loading, setLoading] = React.useState(false);
+  const [msg, setMsg] = React.useState<string | null>(null);
 
-  const [status, setStatus] = useState<"idle" | "ok" | "err">("idle");
-  const [msg, setMsg] = useState<string | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const [items, setItems] = React.useState<SuggestItem[]>([]);
+  const [activeIndex, setActiveIndex] = React.useState<number>(-1);
 
-  const [suggestions, setSuggestions] = useState<SuggestItem[]>([]);
-  const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const abortRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const normalized = normalizeUsername(username);
+  const debounced = useDebounced(normalized, 180);
 
-  const q = useMemo(() => normalize(value), [value]);
-
-  // --- fetch suggestions (debounced) ---
-  useEffect(() => {
-    setMsg(null);
-    setStatus("idle");
-
-    if (!q || q.length < 1) {
-      setSuggestions([]);
-      setOpen(false);
-      setActiveIndex(-1);
-      return;
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    function onDocDown(e: MouseEvent) {
+      const el = containerRef.current;
+      if (!el) return;
+      if (!el.contains(e.target as Node)) setOpen(false);
     }
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, []);
 
-    const t = setTimeout(async () => {
+  // Fetch suggestions
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      if (!debounced || debounced.length < 1) {
+        setItems([]);
+        setActiveIndex(-1);
+        return;
+      }
+
       try {
-        abortRef.current?.abort();
-        const ac = new AbortController();
-        abortRef.current = ac;
-
-        const res = await fetch(`/api/live/suggest?q=${encodeURIComponent(q)}&limit=8`, {
+        const res = await fetch(`/api/live/suggest?q=${encodeURIComponent(debounced)}&limit=8`, {
           method: "GET",
           cache: "no-store",
-          signal: ac.signal,
         });
 
         if (!res.ok) {
-          setSuggestions([]);
-          setOpen(false);
-          setActiveIndex(-1);
+          if (!cancelled) {
+            setItems([]);
+            setActiveIndex(-1);
+          }
           return;
         }
 
-        const json = await res.json().catch(() => ({}));
-        const items = Array.isArray(json.items) ? (json.items as SuggestItem[]) : [];
+        const json = await res.json();
+        const list = Array.isArray(json?.items) ? (json.items as SuggestItem[]) : [];
 
-        setSuggestions(items);
-        setOpen(items.length > 0);
-        setActiveIndex(items.length > 0 ? 0 : -1);
+        if (!cancelled) {
+          setItems(list);
+          setActiveIndex(list.length ? 0 : -1);
+          setOpen(true);
+        }
       } catch {
-        // ignore
+        if (!cancelled) {
+          setItems([]);
+          setActiveIndex(-1);
+        }
       }
-    }, 150);
+    }
 
-    return () => clearTimeout(t);
-  }, [q]);
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced]);
 
   function pick(item: SuggestItem) {
-    setValue(item.username);
+    setUsername(item.username);
+    setMsg(null);
     setOpen(false);
-    setSuggestions([]);
+    setItems((prev) => prev); // noop
     setActiveIndex(-1);
-    // remet le focus
-    setTimeout(() => inputRef.current?.focus(), 0);
+    // refocus
+    requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const username = normalize(value);
-    if (!username) return;
-
-    setLoading(true);
-    setStatus("idle");
+  async function doLink() {
     setMsg(null);
 
+    const u = normalizeUsername(username);
+    if (!u) {
+      setMsg("❌ Entre un @username.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/live/link", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username: u }),
       });
 
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setStatus("err");
-        setMsg(json?.hint || json?.details || json?.error || "Erreur");
+        const hint = json?.hint ? ` — ${json.hint}` : "";
+        setMsg(`❌ ${json?.error ?? "error"}${hint}`);
         return;
       }
 
-      setStatus("ok");
-      setMsg("✅ Live lié !");
-      setOpen(false);
-      setSuggestions([]);
-      setActiveIndex(-1);
-
-      // Important: pour que /me réaffiche immédiatement "Lié"
-      // (si tu ne fais pas déjà refresh côté parent)
-      window.location.reload();
+      setMsg("✅ Lié ! Recharge /me si besoin.");
+      // petit refresh client (sans router import)
+      setTimeout(() => {
+        window.location.reload();
+      }, 250);
+    } catch (e: any) {
+      setMsg(`❌ réseau: ${String(e?.message ?? e)}`);
     } finally {
       setLoading(false);
     }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || suggestions.length === 0) return;
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setOpen(true);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+
+    if (!open || items.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(suggestions.length - 1, i + 1));
+      setActiveIndex((i) => Math.min(items.length - 1, i + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(0, i - 1));
     } else if (e.key === "Enter") {
-      if (activeIndex >= 0 && activeIndex < suggestions.length) {
+      // si dropdown ouvert, Enter prend la suggestion active (sinon ça link)
+      if (activeIndex >= 0 && activeIndex < items.length) {
         e.preventDefault();
-        pick(suggestions[activeIndex]);
+        pick(items[activeIndex]);
       }
-    } else if (e.key === "Escape") {
-      setOpen(false);
     }
   }
 
   return (
-    <div style={{ position: "relative" }}>
-      <form onSubmit={onSubmit} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          doLink();
+        }}
+        style={{ display: "flex", gap: 10, alignItems: "center" }}
+      >
         <input
           ref={inputRef}
           placeholder="@ton_username"
-          value={value}
+          value={username}
           onChange={(e) => {
-            setValue(e.target.value);
+            setUsername(e.target.value);
+            setMsg(null);
             setOpen(true);
           }}
-          onFocus={() => suggestions.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onFocus={() => {
+            if (items.length) setOpen(true);
+          }}
           onKeyDown={onKeyDown}
           style={{
             flex: 1,
@@ -165,83 +254,88 @@ export default function LinkLiveForm({ initialUsername = "" }: Props) {
             border: "1px solid rgba(255,255,255,0.25)",
             background: "rgba(0,0,0,0.25)",
             color: "white",
+            outline: "none",
           }}
+          autoComplete="off"
+          spellCheck={false}
         />
 
         <button
           type="submit"
-          disabled={loading || !normalize(value)}
+          disabled={loading || !normalizeUsername(username)}
           style={{
             padding: "10px 14px",
             borderRadius: 10,
             border: "1px solid rgba(255,255,255,0.25)",
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1,
           }}
         >
           {loading ? "..." : "Lier"}
         </button>
-
-        {status === "ok" ? <span style={{ color: "#8BFF8B" }}>✅</span> : null}
-        {status === "err" ? <span style={{ color: "#FF7C7C" }}>❌</span> : null}
       </form>
 
       {msg ? (
-        <div style={{ marginTop: 8, fontSize: 12, color: status === "err" ? "#FF7C7C" : "rgba(255,255,255,0.8)" }}>
-          {msg}
-        </div>
+        <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9, whiteSpace: "pre-wrap" }}>{msg}</div>
       ) : null}
 
-      {open && suggestions.length > 0 ? (
+      {/* Dropdown */}
+      {open && items.length > 0 ? (
         <div
           style={{
             position: "absolute",
-            top: 48,
             left: 0,
             right: 0,
-            border: "1px solid rgba(255,255,255,0.18)",
-            background: "rgba(10,10,15,0.95)",
+            marginTop: 8,
             borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(20,20,24,0.92)",
+            backdropFilter: "blur(8px)",
             overflow: "hidden",
             zIndex: 50,
           }}
         >
-          {suggestions.map((s, idx) => {
-            const isActive = idx === activeIndex;
+          {items.map((it, idx) => {
+            const active = idx === activeIndex;
             return (
               <button
-                key={`${s.username}-${s.provider_user_id}`}
+                key={`${it.provider_user_id}-${it.username}-${idx}`}
                 type="button"
-                onMouseDown={(e) => e.preventDefault()} // empêche blur avant click
-                onClick={() => pick(s)}
+                onMouseEnter={() => setActiveIndex(idx)}
+                onMouseDown={(e) => e.preventDefault()} // évite de perdre le focus avant click
+                onClick={() => pick(it)}
                 style={{
                   width: "100%",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  border: "none",
+                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
+                  color: "white",
+                  cursor: "pointer",
                   display: "flex",
                   gap: 10,
                   alignItems: "center",
-                  padding: "10px 12px",
-                  border: "none",
-                  background: isActive ? "rgba(255,255,255,0.08)" : "transparent",
-                  color: "white",
-                  cursor: "pointer",
-                  textAlign: "left",
                 }}
               >
-                <img
-                  src={s.avatar_url || "https://placehold.co/32x32"}
-                  width={32}
-                  height={32}
-                  style={{ borderRadius: 999, objectFit: "cover" }}
-                  alt=""
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>@{s.username}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>
-                    {s.nickname ? s.nickname : "—"} • {s.provider_user_id}
+                <Avatar url={it.avatar_url} alt={it.username} />
+
+                <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, lineHeight: "18px" }}>
+                    @{it.username}
+                  </div>
+                  <div style={{ opacity: 0.75, fontSize: 12, lineHeight: "16px" }}>
+                    {it.nickname ? (
+                      <>
+                        {it.nickname} <span style={{ opacity: 0.55 }}>•</span>{" "}
+                      </>
+                    ) : null}
+                    <span style={{ opacity: 0.7 }}>{it.provider_user_id}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.65 }}>
-                  {typeof s.score === "number" ? `≈${s.score.toFixed(2)}` : ""}
+
+                {/* petit “score” / recency optionnel */}
+                <div style={{ opacity: 0.5, fontSize: 12, flex: "0 0 auto" }}>
+                  {it.created_at ? "" : ""}
                 </div>
               </button>
             );
