@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+<<<<<<< HEAD
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -7,6 +8,10 @@ function authOk(req: Request) {
   const key = url.searchParams.get("key") || req.headers.get("x-api-key");
   return Boolean(key && key === process.env.BRIDGE_API_KEY);
 }
+=======
+import { getOpenIdFromSession } from "../../../../lib/session";
+import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
 function genCode() {
   // 6 chars lisibles, évite 0/O/1/I
@@ -24,11 +29,16 @@ function genCode() {
  * -> { code, expires_at }
  */
 export async function POST(req: Request) {
+<<<<<<< HEAD
   if (!authOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const userId = String(body?.userId || "").trim();
   if (!userId) return NextResponse.json({ error: "missing_userId" }, { status: 400 });
+=======
+  const openId = await getOpenIdFromSession();
+  if (!openId) return NextResponse.json({ error: "not_logged_in" }, { status: 401 });
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
   const sb = supabaseAdmin();
 

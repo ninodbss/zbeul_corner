@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+<<<<<<< HEAD
 import sounds from "@/data/sounds.json";
 import { getOpenIdFromSession } from "@/lib/session";
 import { saveUserSound } from "@/lib/supabaseAdmin";
@@ -18,6 +19,20 @@ export async function POST(req: Request) {
 
   const form = await req.formData();
   const soundId = String(form.get("sound_id") || "");
+=======
+import { getOpenIdFromSession } from "../../../lib/session";
+import { isKnownSoundId } from "../../../lib/sounds";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+
+export async function POST(req: Request) {
+  const openId = await getOpenIdFromSession();
+  if (!openId) return NextResponse.redirect(new URL("/?err=login", req.url));
+
+  const form = await req.formData();
+  const soundId = String(form.get("sound_id") ?? "").trim();
+  if (!soundId) return NextResponse.redirect(new URL("/sounds?err=missing_sound", req.url));
+  if (!isKnownSoundId(soundId)) return NextResponse.redirect(new URL("/sounds?err=invalid_sound", req.url));
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
   const list = sounds as unknown as Sound[];
   const sound = list.find((s) => s.id === soundId);

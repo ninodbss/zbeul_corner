@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import sounds from "../../../../data/sounds.json";
+import { getSoundById } from "../../../../lib/sounds";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-
-type Sound = { id: string; title: string; artist?: string; durationSec?: number; region?: string; cmlUrl?: string; tags?: string[] };
 
 export async function GET(req: Request) {
   const apiKey = process.env.BRIDGE_API_KEY;
@@ -16,8 +14,7 @@ export async function GET(req: Request) {
   const { data } = await sb.from("user_sounds").select("sound_id").eq("open_id", openId).maybeSingle();
   const soundId = data?.sound_id ?? null;
 
-  const list = sounds as unknown as Sound[];
-  const sound = soundId ? list.find((s) => s.id === soundId) ?? null : null;
+  const sound = soundId ? getSoundById(soundId) : null;
 
   return NextResponse.json({ open_id: openId, sound });
 }

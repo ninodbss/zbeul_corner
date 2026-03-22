@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿import Link from "next/link";
 import soundsData from "@/data/sounds.json";
 import { getSession } from "@/lib/session";
@@ -13,6 +14,41 @@ type Sound = {
 };
 
 type SearchParams = { q?: string; tag?: string; page?: string };
+=======
+﻿import { getOpenIdFromSession } from "@/lib/session";
+import { getSounds } from "@/lib/sounds";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+function getMessage(err?: string) {
+  if (err === "missing_sound") {
+    return {
+      title: "Selection incomplete",
+      body: "Choisis un son valide dans la liste avant d’envoyer le formulaire.",
+      tone: "error",
+    };
+  }
+
+  if (err === "invalid_sound") {
+    return {
+      title: "Son invalide",
+      body: "Le serveur a refuse cette selection, probablement parce qu’elle ne fait pas partie du catalogue.",
+      tone: "error",
+    };
+  }
+
+  return null;
+}
+
+export default async function SoundsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ err?: string }> | { err?: string };
+}) {
+  const openId = await getOpenIdFromSession();
+  const params = searchParams ? await Promise.resolve(searchParams) : {};
+  const message = getMessage(params.err);
+  let selected: string | null = null;
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
 // -------- helpers --------
 function uniq(arr: string[]) {
@@ -79,6 +115,7 @@ export default async function SoundsPage({
     }
   }
 
+<<<<<<< HEAD
   const allSounds = (soundsData as unknown as Sound[]).map((s) => ({
     id: s.id,
     title: s.title ?? s.id,
@@ -87,6 +124,9 @@ export default async function SoundsPage({
     url: s.url,
     creativeCenterUrl: s.creativeCenterUrl,
   }));
+=======
+  const list = getSounds();
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
   const tags = ["Tous", ...pickTags(allSounds)];
 
@@ -114,6 +154,7 @@ export default async function SoundsPage({
 
   // UI
   return (
+<<<<<<< HEAD
     <section className="stack">
       <div className="card hero">
         <div className="hero-top">
@@ -239,12 +280,110 @@ export default async function SoundsPage({
                   <input type="hidden" name="sound_id" value={s.id} />
                   <button className="btn btn-primary" type="submit" disabled={!connected}>
                     Choisir
+=======
+    <main className="page-shell">
+      <section className="page-header reveal">
+        <div className="card page-header-main">
+          <span className="eyebrow">Catalogue CML</span>
+          <div className="stack">
+            <h1>Choisis un son fiable pour ton passage en tete.</h1>
+            <p className="lede">
+              Chaque son de cette page est pre-valide dans ton catalogue interne. Tu peux donc
+              selectionner rapidement un titre sans passer par un flux de moderation complique.
+            </p>
+          </div>
+          <div className="hero-meta">
+            <span className={`pill status-pill ${openId ? "ok" : "warn"}`}>
+              {openId ? "Connexion active" : "Connexion requise pour enregistrer"}
+            </span>
+            <span className="pill">{list.length} sons disponibles</span>
+          </div>
+        </div>
+
+        <aside className="card page-header-side">
+          <span className="kicker">Comment ca marche</span>
+          <div className="mini-list">
+            <div className="mini-row">
+              <span className="mini-badge">1</span>
+              <div>
+                <h3>Ouvre un titre</h3>
+                <p>Chaque lien pointe vers le Creative Center pour verifier rapidement le contexte.</p>
+              </div>
+            </div>
+            <div className="mini-row">
+              <span className="mini-badge">2</span>
+              <div>
+                <h3>Selectionne</h3>
+                <p>Le bouton enregistre ton choix dans Supabase et met a jour ton profil.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      {message && (
+        <div className={`notice ${message.tone === "error" ? "error" : ""} reveal reveal-delay-1`}>
+          <div>
+            <strong>{message.title}</strong>
+            <p>{message.body}</p>
+          </div>
+        </div>
+      )}
+
+      {!openId && (
+        <div className="notice reveal reveal-delay-1">
+          <div>
+            <strong>Tu n’es pas encore connecte.</strong>
+            <p>Connecte-toi avec TikTok pour enregistrer un choix et l’afficher dans ton espace perso.</p>
+          </div>
+          <a className="btn btn-primary btn-sm" href="/api/auth/tiktok">Connexion TikTok</a>
+        </div>
+      )}
+
+      <section className="sound-grid reveal reveal-delay-2">
+        {list.map((s) => (
+          <article key={s.id} className="card sound-card">
+            <div className="sound-card-head">
+              <div>
+                <h2 className="sound-title">{s.title}</h2>
+                <p className="sound-artist">{s.artist ?? "Artiste non renseigne"}</p>
+              </div>
+              {selected === s.id ? <span className="selected-mark">Actif</span> : null}
+            </div>
+
+            <div className="tag-row">
+              {s.region ? <span className="tag">Region {s.region}</span> : null}
+              {s.durationSec ? <span className="tag">{s.durationSec}s</span> : null}
+              {s.tags?.map((tag) => (
+                <span className="tag" key={tag}>{tag}</span>
+              ))}
+            </div>
+
+            <div className="sound-actions">
+              {s.cmlUrl ? (
+                <a className="btn btn-secondary btn-sm" href={s.cmlUrl} target="_blank" rel="noreferrer">
+                  Voir dans Creative Center
+                </a>
+              ) : (
+                <span className="empty-note">Lien Creative Center non fourni</span>
+              )}
+
+              {openId ? (
+                <form action="/api/select-sound" method="post">
+                  <input type="hidden" name="sound_id" value={s.id} />
+                  <button
+                    className={`btn btn-sm ${selected === s.id ? "btn-primary" : "btn-ghost"}`}
+                    type="submit"
+                  >
+                    {selected === s.id ? "Selection actuelle" : "Choisir ce son"}
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
                   </button>
                 </form>
               </div>
 
               {!connected ? <div className="muted tiny">Connecte-toi pour sélectionner.</div> : null}
             </div>
+<<<<<<< HEAD
           );
         })}
       </div>
@@ -276,6 +415,12 @@ export default async function SoundsPage({
         MVP — sons issus d’une liste curée (TikTok Commercial Music Library).
       </div>
     </section>
+=======
+          </article>
+        ))}
+      </section>
+    </main>
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
   );
 }
 

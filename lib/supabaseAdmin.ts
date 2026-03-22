@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+<<<<<<< HEAD
 export type UserSoundRow = {
   open_id: string;
   sound_id: string;
@@ -20,6 +21,20 @@ function mustEnv(name: string): string {
     throw new Error(`Missing ${name}`);
   }
   return v;
+=======
+let adminClient: ReturnType<typeof createClient> | null = null;
+
+export function supabaseAdmin() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!adminClient) {
+    adminClient = createClient(url, key, { auth: { persistSession: false } });
+  }
+
+  return adminClient;
+>>>>>>> c9571fa (Polish UI and harden sound selection flow)
 }
 
 export function supabaseAdmin(): SupabaseClient {
