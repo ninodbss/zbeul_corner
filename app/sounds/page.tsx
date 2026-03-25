@@ -94,26 +94,26 @@ export default async function SoundsPage({
           <div className="hero-copy">
             <span className="eyebrow">Catalogue CML</span>
             <div className="stack">
-              <h1>Choisis un son fiable pour ton passage en tete.</h1>
+              <h1>Choisis ton son.</h1>
               <p className="lede">
-                Filtre ton catalogue, ouvre les references Creative Center quand elles existent, puis enregistre ton son actif en un clic.
+                Recherche si besoin, puis valide un seul son pour ton profil.
               </p>
             </div>
 
             <div className="hero-meta">
               <span className={`pill status-pill ${connected ? "ok" : "warn"}`}>
-                {connected ? "Connexion active" : "Connexion requise pour enregistrer"}
+                {connected ? "Tu peux enregistrer" : "Connexion requise"}
               </span>
-              <span className="pill">{total} son(s) trouves</span>
+              <span className="pill">{total} resultat(s)</span>
               <span className="pill">Page {safePage}/{totalPages}</span>
             </div>
 
             <div className="actions">
               <Link className="btn btn-secondary" href="/">
-                Retour accueil
+                Accueil
               </Link>
               <Link className="btn btn-ghost" href="/me">
-                Mon espace
+                Mon profil
               </Link>
               {!connected ? (
                 <a className="btn btn-primary" href="/api/auth/tiktok">
@@ -125,22 +125,22 @@ export default async function SoundsPage({
 
           <aside className="hero-panel">
             <div>
-              <span className="label">Parcours catalogue</span>
-              <strong>Recherche + choix</strong>
+              <span className="label">A faire</span>
+              <strong>1 son</strong>
             </div>
             <div className="mini-list">
               <div className="mini-row">
                 <span className="mini-badge">1</span>
                 <div>
-                  <h3>Filtre</h3>
-                  <p>Recherche par titre, id ou tags pour retrouver vite le bon son.</p>
+                  <h3>Trouve le bon titre</h3>
+                  <p>Utilise la recherche ou les tags.</p>
                 </div>
               </div>
               <div className="mini-row">
                 <span className="mini-badge">2</span>
                 <div>
-                  <h3>Selectionne</h3>
-                  <p>Le choix est sauvegarde pour ton `open_id` et remonte ensuite au bridge live.</p>
+                  <h3>Valide-le</h3>
+                  <p>Ton dernier choix devient le son actif.</p>
                 </div>
               </div>
             </div>
@@ -160,8 +160,8 @@ export default async function SoundsPage({
       {!connected ? (
         <div className="notice reveal reveal-delay-1">
           <div>
-            <strong>Tu n’es pas encore connecte.</strong>
-            <p>Tu peux parcourir le catalogue librement, puis te connecter pour enregistrer ton son.</p>
+            <strong>Connexion requise pour enregistrer</strong>
+            <p>Tu peux parcourir la liste maintenant et te connecter quand tu es pret.</p>
           </div>
           <a className="btn btn-primary btn-sm" href="/api/auth/tiktok">
             Se connecter
@@ -174,7 +174,7 @@ export default async function SoundsPage({
           <input
             className="input"
             name="q"
-            placeholder="Rechercher un son, un tag ou un identifiant"
+            placeholder="Rechercher un son"
             defaultValue={q}
           />
           <input type="hidden" name="tag" value={tag || "Tous"} />
@@ -241,7 +241,7 @@ export default async function SoundsPage({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Voir dans Creative Center
+                    Ouvrir
                   </a>
                 ) : null}
 
@@ -261,13 +261,13 @@ export default async function SoundsPage({
 
       <div className="pagination reveal reveal-delay-2">
         <Link className={`btn btn-ghost ${safePage <= 1 ? "btn-disabled" : ""}`} href={buildHref({ q, tag, page: String(Math.max(1, safePage - 1)) })}>
-          Page precedente
+          Precedent
         </Link>
         <Link
           className={`btn btn-ghost ${safePage >= totalPages ? "btn-disabled" : ""}`}
           href={buildHref({ q, tag, page: String(Math.min(totalPages, safePage + 1)) })}
         >
-          Page suivante
+          Suivant
         </Link>
       </div>
     </section>

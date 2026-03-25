@@ -18,9 +18,9 @@ export default async function MePage({ searchParams }: PageProps) {
         <section className="card page-header-main reveal">
           <span className="eyebrow">Espace personnel</span>
           <div className="stack">
-            <h1>Ton profil sera disponible apres connexion.</h1>
+            <h1>Connecte-toi pour acceder a ton profil.</h1>
             <p className="lede">
-              Connecte ton compte TikTok pour afficher ton identifiant, ton son actif et l’etat de liaison de ton live.
+              Tu y retrouveras ton son actif et l’etat de liaison de ton live.
             </p>
           </div>
           <div className="actions">
@@ -55,7 +55,7 @@ export default async function MePage({ searchParams }: PageProps) {
         <div className="notice ok reveal">
           <div>
             <strong>Son enregistre</strong>
-            <p>Ta selection a bien ete sauvegardee et sera disponible pour le bridge live.</p>
+            <p>Ton nouveau son est maintenant actif.</p>
           </div>
         </div>
       ) : null}
@@ -71,13 +71,13 @@ export default async function MePage({ searchParams }: PageProps) {
             )}
             <div>
               <h1>{displayName}</h1>
-              <p>Ton espace centralise ton identifiant TikTok, ton son actif et la liaison de ton live.</p>
+              <p>Retrouve ici ton son actif et la liaison de ton live.</p>
             </div>
           </div>
 
           <div className="info-grid">
             <div className="info-tile">
-              <span className="info-label">Open ID</span>
+              <span className="info-label">Compte</span>
               <span className="info-value">{openId.slice(0, 8)}...</span>
             </div>
             <div className="info-tile">
@@ -89,16 +89,16 @@ export default async function MePage({ searchParams }: PageProps) {
 
         <aside className="card aside-card">
           <span className="kicker">Liaison live</span>
-          <h2>{liveLink?.provider_user_id ? "Ton live est deja rattache." : "Relie ton compte live."}</h2>
+          <h2>{liveLink?.provider_user_id ? "Live relie" : "Live non relie"}</h2>
           <p className="helper">
             {liveLink?.provider_user_id
-              ? `Compte detecte: @${liveLink.username ?? "inconnu"} (${liveLink.provider_user_id}).`
-              : "Entre ton @username TikTok pour retrouver ton identifiant TikFinity depuis les evenements recents."}
+              ? `Compte detecte : @${liveLink.username ?? "inconnu"}`
+              : "Entre ton @username TikTok pour rattacher ton live."}
           </p>
           <div className="tag-row" style={{ marginTop: 12 }}>
             {liveLink?.provider_user_id ? (
               <>
-                <span className="tag">Provider tikfinity</span>
+                <span className="tag">TikFinity</span>
                 <span className="tag">{liveLink.provider_user_id}</span>
               </>
             ) : (
@@ -114,8 +114,8 @@ export default async function MePage({ searchParams }: PageProps) {
           <h2>{chosen ? chosen.title : "Aucun son selectionne"}</h2>
           <p className="support">
             {chosen
-              ? `${chosen.artist ? `${chosen.artist} · ` : ""}Ce son sera remonte au bridge pour les evenements live.`
-              : "Choisis un titre dans le catalogue pour activer un son de leader sur ton profil."}
+              ? `${chosen.artist ? `${chosen.artist} · ` : ""}C’est le son utilise pour ton profil.`
+              : "Choisis un titre pour activer ton son."}
           </p>
           <Link className="btn btn-secondary" href="/sounds">
             {chosen ? "Changer mon son" : "Choisir un son"}
@@ -124,17 +124,17 @@ export default async function MePage({ searchParams }: PageProps) {
 
         <div className="card feature-card col4">
           <span className="kicker">Lier mon live</span>
-          <h2>Connexion sans code</h2>
+          <h2>Associer mon live</h2>
           <p className="support">
-            Le site cherche les derniers evenements de ton compte live puis rattache ton profil Marble Live au bon `provider_user_id`.
+            Le site retrouve ton compte live a partir de ton username.
           </p>
           <LinkLiveForm initialUsername={liveLink?.username ?? ""} />
         </div>
 
         <div className="card feature-card col4">
           <span className="kicker">Session</span>
-          <h2>Deconnexion manuelle</h2>
-          <p className="support">Tu peux fermer proprement la session locale sans toucher aux parametres de ton compte TikTok.</p>
+          <h2>Se deconnecter</h2>
+          <p className="support">Ferme la session sur ce site.</p>
           <form action="/api/logout" method="post">
             <button className="btn btn-danger" type="submit">
               Se deconnecter

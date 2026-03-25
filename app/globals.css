@@ -178,7 +178,7 @@ select {
 .page-shell {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
 }
 
 .stack {
@@ -225,7 +225,7 @@ select {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 28px;
+  padding: 24px;
 }
 
 .hero::before,
@@ -299,7 +299,7 @@ h3 {
 .hero-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pill {
@@ -444,9 +444,9 @@ h3 {
 .feature-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-height: 100%;
-  padding: 22px;
+  padding: 20px;
 }
 
 .kicker {
@@ -860,6 +860,10 @@ h3 {
   gap:10px;
   flex-wrap:wrap;
   align-items:center;
+}
+
+.sound-toolbar .input {
+  flex: 1 1 320px;
 }
 
 .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
