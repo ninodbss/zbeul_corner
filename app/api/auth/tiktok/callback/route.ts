@@ -19,7 +19,15 @@ export async function GET(req: Request) {
   const cookieState = cookieStore.get("tt_state")?.value;
 
   if (!cookieState || !state || cookieState !== state) {
-    return NextResponse.json({ error: "invalid_state" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "invalid_state",
+        has_cookie_state: Boolean(cookieState),
+        has_query_state: Boolean(state),
+        host: new URL(req.url).host,
+      },
+      { status: 400 }
+    );
   }
 
   if (!code) {
@@ -51,4 +59,3 @@ export async function GET(req: Request) {
   // ✅ retour à la home
   return NextResponse.redirect(new URL("/", req.url));
 }
-
