@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { exchangeCodeForToken, fetchUserInfo } from "../../../../../lib/tiktok";
+import { verifyTikTokState } from "../../../../../lib/tiktokState";
 import { setSession } from "../../../../../lib/session";
 import { supabaseAdmin } from "../../../../../lib/supabaseAdmin";
 
@@ -15,16 +15,26 @@ export async function GET(req: Request) {
     return NextResponse.json({ error, errorDescription }, { status: 400 });
   }
 
-  const cookieStore = await cookies();
-  const cookieState = cookieStore.get("tt_state")?.value;
-
-  if (!cookieState || !state || cookieState !== state) {
+  if (!state) {
     return NextResponse.json(
       {
         error: "invalid_state",
-        has_cookie_state: Boolean(cookieState),
         has_query_state: Boolean(state),
         host: new URL(req.url).host,
+        reason: "missing_state",
+      },
+      { status: 400 }
+    );
+  }
+
+  const stateCheck = verifyTikTokState(state);
+  if (!stateCheck.ok) {
+    return NextResponse.json(
+      {
+        error: "invalid_state",
+        has_query_state: true,
+        host: new URL(req.url).host,
+        reason: stateCheck.reason,
       },
       { status: 400 }
     );
@@ -52,9 +62,6 @@ export async function GET(req: Request) {
 
   // ✅ session cookie
   await setSession(user.open_id);
-
-  // (optionnel) tu peux nettoyer le state cookie
-  cookieStore.set("tt_state", "", { path: "/", maxAge: 0 });
 
   // ✅ retour à la home
   return NextResponse.redirect(new URL("/", req.url));
