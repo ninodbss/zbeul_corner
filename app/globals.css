@@ -189,7 +189,7 @@ select {
 
 .section-head {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
 }
@@ -524,7 +524,7 @@ h3 {
 
 .mini-row {
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -562,7 +562,7 @@ h3 {
 
 .sound-card-head {
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
 }

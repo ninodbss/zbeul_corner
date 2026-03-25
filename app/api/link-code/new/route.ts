@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-<<<<<<< HEAD
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -8,13 +7,8 @@ function authOk(req: Request) {
   const key = url.searchParams.get("key") || req.headers.get("x-api-key");
   return Boolean(key && key === process.env.BRIDGE_API_KEY);
 }
-=======
-import { getOpenIdFromSession } from "../../../../lib/session";
-import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
->>>>>>> c9571fa (Polish UI and harden sound selection flow)
 
 function genCode() {
-  // 6 chars lisibles, évite 0/O/1/I
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = crypto.randomBytes(6);
   let out = "";
@@ -22,35 +16,25 @@ function genCode() {
   return out;
 }
 
-/**
- * POST /api/link-code/new
- * Header: x-api-key: BRIDGE_API_KEY
- * Body: { userId }
- * -> { code, expires_at }
- */
 export async function POST(req: Request) {
-<<<<<<< HEAD
-  if (!authOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authOk(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const userId = String(body?.userId || "").trim();
-  if (!userId) return NextResponse.json({ error: "missing_userId" }, { status: 400 });
-=======
-  const openId = await getOpenIdFromSession();
-  if (!openId) return NextResponse.json({ error: "not_logged_in" }, { status: 401 });
->>>>>>> c9571fa (Polish UI and harden sound selection flow)
+  if (!userId) {
+    return NextResponse.json({ error: "missing_userId" }, { status: 400 });
+  }
 
   const sb = supabaseAdmin();
-
-  // expire 10 minutes
   const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (let i = 0; i < 5; i++) {
     const code = genCode();
-
-    const { error } = await (sb as any).from("link_codes").insert({
+    const { error } = await sb.from("link_codes").insert({
       code,
       provider: "tikfinity",
       provider_user_id: userId,
@@ -64,16 +48,16 @@ export async function POST(req: Request) {
     lastError = error;
   }
 
-  const cause: any = (lastError as any)?.cause;
+  const error = lastError as { message?: string; cause?: { message?: string; code?: string; errno?: number; syscall?: string } } | null;
 
   return NextResponse.json(
     {
       error: "failed_to_create_code",
-      detail: lastError?.message || String(lastError),
-      cause: cause?.message || String(cause || ""),
-      code: cause?.code || null,
-      errno: cause?.errno || null,
-      syscall: cause?.syscall || null,
+      detail: error?.message || String(lastError),
+      cause: error?.cause?.message || null,
+      code: error?.cause?.code || null,
+      errno: error?.cause?.errno || null,
+      syscall: error?.cause?.syscall || null,
     },
     { status: 500 }
   );

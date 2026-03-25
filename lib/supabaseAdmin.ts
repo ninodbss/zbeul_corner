@@ -1,7 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-<<<<<<< HEAD
 export type UserSoundRow = {
   open_id: string;
   sound_id: string;
@@ -12,96 +11,52 @@ export type UserSoundRow = {
   updated_at?: string;
 };
 
-let _admin: SupabaseClient | null = null;
+let adminClient: SupabaseClient | null = null;
 
 function mustEnv(name: string): string {
-  const v = process.env[name];
-  if (!v || !String(v).trim()) {
-    console.error(`[supabaseAdmin] Missing env var: ${name}`);
+  const value = process.env[name];
+  if (!value || !String(value).trim()) {
     throw new Error(`Missing ${name}`);
   }
-  return v;
-=======
-let adminClient: ReturnType<typeof createClient> | null = null;
-
-export function supabaseAdmin() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!adminClient) {
-    adminClient = createClient(url, key, { auth: { persistSession: false } });
-  }
-
-  return adminClient;
->>>>>>> c9571fa (Polish UI and harden sound selection flow)
+  return value;
 }
 
 export function supabaseAdmin(): SupabaseClient {
-  if (_admin) return _admin;
+  if (adminClient) return adminClient;
 
-  const url = mustEnv("SUPABASE_URL");
-  const key = mustEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-  _admin = createClient(url, key, {
+  adminClient = createClient(mustEnv("SUPABASE_URL"), mustEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false },
     global: {
       headers: { "X-Client-Info": "zbeul_corner-admin" },
     },
   });
 
-  return _admin;
+  return adminClient;
 }
 
-// ✅ enregistre/écrase le son choisi pour un open_id
-export async function saveUserSound(
-  openId: string,
-  payload: Omit<UserSoundRow, "open_id">
-) {
-  if (!openId || !openId.trim()) throw new Error("saveUserSound: missing openId");
-
-  const sb = supabaseAdmin();
+export async function saveUserSound(openId: string, payload: Omit<UserSoundRow, "open_id">) {
+  if (!openId.trim()) throw new Error("saveUserSound: missing openId");
 
   const row: UserSoundRow = {
     open_id: openId,
     ...payload,
   };
 
-  const { error } = await (sb as any)
-    .from("user_sounds")
-    .upsert(row, { onConflict: "open_id" });
-
-  if (error) {
-    console.error("[saveUserSound] Supabase error:", error);
-    throw error;
-  }
+  const { error } = await supabaseAdmin().from("user_sounds").upsert(row, { onConflict: "open_id" });
+  if (error) throw error;
 
   return true;
 }
 
-// ✅ récupère le son choisi pour un open_id
 export async function getUserSound(openId: string): Promise<UserSoundRow | null> {
-  if (!openId || !openId.trim()) throw new Error("getUserSound: missing openId");
+  if (!openId.trim()) throw new Error("getUserSound: missing openId");
 
-  const sb = supabaseAdmin();
+  const { data, error } = await supabaseAdmin().from("user_sounds").select("*").eq("open_id", openId).maybeSingle();
+  if (error) throw error;
 
-  const { data, error } = await (sb as any)
-    .from("user_sounds")
-    .select("*")
-    .eq("open_id", openId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[getUserSound] Supabase error:", error);
-    throw error;
-  }
-
-  return (data as UserSoundRow) ?? null;
+  return (data as UserSoundRow | null) ?? null;
 }
 
-// ✅ alias (optionnel) déjà utilisé dans ton projet
 export async function getSelectedSound(openId: string) {
   return getUserSound(openId);
 }
-
-

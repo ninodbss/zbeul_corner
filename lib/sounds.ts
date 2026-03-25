@@ -4,9 +4,11 @@ export type Sound = {
   id: string;
   title: string;
   artist?: string;
+  url?: string;
+  creativeCenterUrl?: string;
+  cmlUrl?: string;
   durationSec?: number;
   region?: string;
-  cmlUrl?: string;
   tags?: string[];
 };
 
